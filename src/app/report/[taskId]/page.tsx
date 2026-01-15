@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback, useEffect } from 'react'
-import { useParams, useSearchParams } from 'next/navigation'
+import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { usePhotoCapture } from '@/hooks/usePhotoCapture'
 import { useScanReports, type ScanCategory } from '@/hooks/useScanReports'
@@ -13,19 +13,30 @@ import ScanUpload from '@/components/ScanUpload'
 import ScanPreview from '@/components/ScanPreview'
 import FindingsEditor from '@/components/FindingsEditor'
 import PDFPreview from '@/components/PDFPreview'
+import UploadProgress from '@/components/UploadProgress'
+import UploadSuccess from '@/components/UploadSuccess'
 import { generatePDF, downloadPDF } from '@/utils/pdfGenerator'
+import { uploadReportToTM, type UploadProgress as UploadProgressType } from '@/utils/tmUpload'
 
 export default function ReportPage() {
   const params = useParams()
   const searchParams = useSearchParams()
+  const router = useRouter()
   const [showCamera, setShowCamera] = useState(false)
   const [showPdfPreview, setShowPdfPreview] = useState(false)
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false)
   const [pdfUrl, setPdfUrl] = useState<string | null>(null)
   const [pdfBlob, setPdfBlob] = useState<Blob | null>(null)
 
+  // Upload state
+  const [isUploading, setIsUploading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState<UploadProgressType | null>(null)
+  const [showUploadSuccess, setShowUploadSuccess] = useState(false)
+
   const taskId = params.taskId as string
   const roId = searchParams.get('roId')
+  const shopId = searchParams.get('shopId')
+  const inspectionId = searchParams.get('inspectionId')
 
   // Photo capture state
   const {
@@ -138,10 +149,70 @@ export default function ReportPage() {
     // Don't clear the URL yet in case they want to re-open
   }, [])
 
-  const handleUploadToTm = useCallback(() => {
-    // Placeholder for SPEC-008
-    alert('Upload to Tekmetric will be implemented in SPEC-008')
+  const handleUploadToTm = useCallback(async () => {
+    if (!pdfBlob || !shopId || !roId || !inspectionId || !taskId) {
+      alert('Missing required information for upload. Please try generating the PDF again.')
+      return
+    }
+
+    setShowPdfPreview(false)
+    setIsUploading(true)
+    setUploadProgress({
+      step: 'preparing',
+      message: 'Preparing upload...',
+      percent: 0
+    })
+
+    const result = await uploadReportToTM(
+      shopId,
+      parseInt(roId, 10),
+      parseInt(inspectionId, 10),
+      parseInt(taskId, 10),
+      pdfBlob,
+      findings,
+      setUploadProgress
+    )
+
+    if (result.success) {
+      setIsUploading(false)
+      setUploadProgress(null)
+      setShowUploadSuccess(true)
+
+      // Clear local state after successful upload
+      clearSavedFindings()
+    } else {
+      setUploadProgress({
+        step: 'error',
+        message: result.error || 'Upload failed',
+        percent: 0
+      })
+    }
+  }, [pdfBlob, shopId, roId, inspectionId, taskId, findings, clearSavedFindings])
+
+  const handleUploadRetry = useCallback(() => {
+    handleUploadToTm()
+  }, [handleUploadToTm])
+
+  const handleUploadClose = useCallback(() => {
+    setIsUploading(false)
+    setUploadProgress(null)
   }, [])
+
+  const handleUploadSuccessClose = useCallback(() => {
+    setShowUploadSuccess(false)
+  }, [])
+
+  const handleCreateAnother = useCallback(() => {
+    setShowUploadSuccess(false)
+    // Clear all state for new report
+    // Photos and scans are managed by hooks with their own state
+    setFindings('')
+    clearSavedFindings()
+    setPdfUrl(null)
+    setPdfBlob(null)
+    // Navigate back to home to select new task
+    router.push('/')
+  }, [clearSavedFindings, router, setFindings])
 
   const totalAttachments = photoCount + scanCount
   const canGeneratePdf = totalAttachments > 0 || findings.trim().length > 0
@@ -316,6 +387,26 @@ export default function ReportPage() {
           onClose={handleClosePdfPreview}
           onDownload={handleDownloadPdf}
           onUpload={handleUploadToTm}
+          uploadDisabled={!shopId || !inspectionId}
+        />
+      )}
+
+      {/* Upload Progress Modal */}
+      {isUploading && uploadProgress && (
+        <UploadProgress
+          progress={uploadProgress}
+          onClose={handleUploadClose}
+          onRetry={uploadProgress.step === 'error' ? handleUploadRetry : undefined}
+        />
+      )}
+
+      {/* Upload Success Modal */}
+      {showUploadSuccess && roId && shopId && (
+        <UploadSuccess
+          roNumber={roId}
+          shopId={shopId}
+          onClose={handleUploadSuccessClose}
+          onCreateAnother={handleCreateAnother}
         />
       )}
     </div>
