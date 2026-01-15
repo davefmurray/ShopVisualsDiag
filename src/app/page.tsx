@@ -1,12 +1,22 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { checkTokenStatus } from '@/utils/api'
-import type { TokenStatus } from '@/types'
+import ROLookup from '@/components/ROLookup'
+import VehicleInfo from '@/components/VehicleInfo'
+import InspectionTaskList from '@/components/InspectionTaskList'
+import type { TokenStatus, RepairOrder, Inspection, InspectionTask } from '@/types'
 
 export default function Home() {
+  const router = useRouter()
   const [tokenStatus, setTokenStatus] = useState<TokenStatus | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  // RO data state
+  const [selectedRO, setSelectedRO] = useState<RepairOrder | null>(null)
+  const [inspections, setInspections] = useState<Inspection[]>([])
 
   useEffect(() => {
     async function fetchTokenStatus() {
@@ -18,10 +28,40 @@ export default function Home() {
     fetchTokenStatus()
   }, [])
 
+  function handleROFound(ro: RepairOrder, inspectionData: Inspection[]) {
+    setError(null)
+    setSelectedRO(ro)
+    setInspections(inspectionData)
+  }
+
+  function handleROError(errorMessage: string) {
+    setError(errorMessage)
+    setSelectedRO(null)
+    setInspections([])
+  }
+
+  function handleClearRO() {
+    setSelectedRO(null)
+    setInspections([])
+    setError(null)
+  }
+
+  function handleTaskSelect(inspection: Inspection, task: InspectionTask) {
+    if (!selectedRO || !tokenStatus?.shopId) return
+
+    // Navigate to report builder with context
+    const params = new URLSearchParams({
+      shopId: tokenStatus.shopId,
+      roId: String(selectedRO.id),
+      inspectionId: String(inspection.id),
+    })
+    router.push(`/report/${task.id}?${params.toString()}`)
+  }
+
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900">
       {/* Header */}
-      <header className="bg-white dark:bg-zinc-800 border-b border-zinc-200 dark:border-zinc-700">
+      <header className="bg-white dark:bg-zinc-800 border-b border-zinc-200 dark:border-zinc-700 sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
           <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
             ShopVisualsDiag
@@ -31,34 +71,65 @@ export default function Home() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-4 py-8">
+      <main className="max-w-4xl mx-auto px-4 py-6 space-y-6">
         {!tokenStatus?.hasToken && !loading ? (
           <NoTokenMessage />
         ) : (
-          <div className="space-y-6">
-            {/* RO Lookup Section */}
-            <section className="bg-white dark:bg-zinc-800 rounded-lg shadow-sm border border-zinc-200 dark:border-zinc-700 p-6">
-              <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-100 mb-4">
-                Find Repair Order
-              </h2>
-              <ROLookupPlaceholder />
-            </section>
+          <>
+            {/* Error Display */}
+            {error && (
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+                <p className="text-red-700 dark:text-red-400">{error}</p>
+              </div>
+            )}
 
-            {/* Instructions */}
-            <section className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-6 border border-blue-200 dark:border-blue-800">
-              <h3 className="font-medium text-blue-900 dark:text-blue-100 mb-2">
-                How to use ShopVisualsDiag
-              </h3>
-              <ol className="list-decimal list-inside space-y-2 text-blue-800 dark:text-blue-200 text-sm">
-                <li>Enter an RO number to find the repair order</li>
-                <li>Select an inspection task to create a report for</li>
-                <li>Capture photos and upload scan reports</li>
-                <li>Add annotations to highlight issues</li>
-                <li>Enter your findings and generate the PDF</li>
-                <li>Upload directly to Tekmetric</li>
-              </ol>
-            </section>
-          </div>
+            {/* RO Search or Vehicle Info */}
+            {!selectedRO ? (
+              <section className="bg-white dark:bg-zinc-800 rounded-lg shadow-sm border border-zinc-200 dark:border-zinc-700 p-6">
+                <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-100 mb-4">
+                  Find Repair Order
+                </h2>
+                <ROLookup
+                  shopId={tokenStatus?.shopId || ''}
+                  onROFound={handleROFound}
+                  onError={handleROError}
+                />
+              </section>
+            ) : (
+              <>
+                {/* Vehicle Info Card */}
+                <VehicleInfo ro={selectedRO} onClear={handleClearRO} />
+
+                {/* Inspection Tasks */}
+                <section className="space-y-3">
+                  <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-100">
+                    Select Inspection Task
+                  </h2>
+                  <InspectionTaskList
+                    inspections={inspections}
+                    onTaskSelect={handleTaskSelect}
+                  />
+                </section>
+              </>
+            )}
+
+            {/* Instructions (show when no RO selected) */}
+            {!selectedRO && (
+              <section className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-6 border border-blue-200 dark:border-blue-800">
+                <h3 className="font-medium text-blue-900 dark:text-blue-100 mb-2">
+                  How to use ShopVisualsDiag
+                </h3>
+                <ol className="list-decimal list-inside space-y-2 text-blue-800 dark:text-blue-200 text-sm">
+                  <li>Enter an RO number to find the repair order</li>
+                  <li>Select an inspection task to create a report for</li>
+                  <li>Capture photos and upload scan reports</li>
+                  <li>Add annotations to highlight issues</li>
+                  <li>Enter your findings and generate the PDF</li>
+                  <li>Upload directly to Tekmetric</li>
+                </ol>
+              </section>
+            )}
+          </>
         )}
       </main>
     </div>
@@ -107,34 +178,12 @@ function NoTokenMessage() {
       <p className="text-yellow-700 dark:text-yellow-300 mb-4">
         Please log into Tekmetric and use the Chrome extension to capture your session token.
       </p>
-      <div className="text-sm text-yellow-600 dark:text-yellow-400">
+      <div className="text-sm text-yellow-600 dark:text-yellow-400 space-y-1">
         <p>1. Install the TM Token Capture extension</p>
         <p>2. Log into your Tekmetric account</p>
         <p>3. Click the extension to capture your token</p>
         <p>4. Refresh this page</p>
       </div>
-    </div>
-  )
-}
-
-function ROLookupPlaceholder() {
-  const [roNumber, setRONumber] = useState('')
-
-  return (
-    <div className="flex gap-3">
-      <input
-        type="text"
-        value={roNumber}
-        onChange={(e) => setRONumber(e.target.value)}
-        placeholder="Enter RO number..."
-        className="flex-1 px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-      />
-      <button
-        disabled
-        className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-      >
-        Search
-      </button>
     </div>
   )
 }
