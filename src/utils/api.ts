@@ -111,7 +111,7 @@ export async function searchRepairOrders(
   // Delegate to getROWithInspections and wrap result
   const result = await getROWithInspections(shopId, roNumber)
   if (!result.success) {
-    return result as ApiResponse<RepairOrder[]>
+    return { success: false, error: result.error }
   }
   // Convert to RepairOrder format for backward compatibility
   return {
@@ -127,79 +127,60 @@ export async function searchRepairOrders(
 
 /**
  * Get repair order by ID
+ * TODO: Implement via video processor when needed
  */
 export async function getRepairOrder(
-  shopId: string,
-  roId: number
+  _shopId: string,
+  _roId: number
 ): Promise<ApiResponse<RepairOrder>> {
-  return tmApiRequest<RepairOrder>(
-    `/api/shops/${shopId}/repair-orders/${roId}`
-  )
+  return { success: false, error: 'Not implemented - use getROWithInspections instead' }
 }
 
 /**
  * Get inspections for a repair order
+ * TODO: Implement via video processor when needed
  */
 export async function getInspections(
-  shopId: string,
-  roId: number
+  _shopId: string,
+  _roId: number
 ): Promise<ApiResponse<Inspection[]>> {
-  return tmApiRequest<Inspection[]>(
-    `/api/shops/${shopId}/repair-orders/${roId}/inspections`
-  )
+  return { success: false, error: 'Not implemented - use getROWithInspections instead' }
 }
 
 /**
  * Get a specific inspection with tasks
+ * TODO: Implement via video processor when needed
  */
 export async function getInspection(
-  shopId: string,
-  inspectionId: number
+  _shopId: string,
+  _inspectionId: number
 ): Promise<ApiResponse<Inspection>> {
-  return tmApiRequest<Inspection>(
-    `/api/shops/${shopId}/inspections/${inspectionId}`
-  )
+  return { success: false, error: 'Not implemented - use getROWithInspections instead' }
 }
 
 /**
  * Update inspection task with media and description
+ * TODO: Implement via video processor when needed
  */
 export async function updateInspectionTask(
-  shopId: string,
-  inspectionId: number,
-  taskId: number,
-  updates: { mediaPath?: string; description?: string }
+  _shopId: string,
+  _inspectionId: number,
+  _taskId: number,
+  _updates: { mediaPath?: string; description?: string }
 ): Promise<ApiResponse<void>> {
-  return tmApiRequest<void>(
-    `/api/shops/${shopId}/inspections/${inspectionId}/tasks/${taskId}`,
-    {
-      method: 'PUT',
-      body: JSON.stringify(updates),
-    }
-  )
+  return { success: false, error: 'Not implemented yet' }
 }
 
 /**
  * Get presigned URL for uploading media to TM
+ * TODO: Implement via video processor when needed
  */
 export async function getUploadUrl(
-  shopId: string,
-  roId: number,
-  inspectionId: number,
-  taskId: number,
-  mediaType: 'pdf' | 'image' | 'video'
+  _shopId: string,
+  _roId: number,
+  _inspectionId: number,
+  _taskId: number,
+  _mediaType: 'pdf' | 'image' | 'video'
 ): Promise<ApiResponse<{ s3: { url: string; fields: Record<string, string> }; path: string }>> {
-  return tmApiRequest(
-    `/media/create-video-upload-url`,
-    {
-      method: 'POST',
-      body: JSON.stringify({
-        shopId,
-        roId,
-        inspectionId,
-        taskId,
-        mediaType,
-      }),
-    }
-  )
+  return { success: false, error: 'Not implemented yet' }
 }
