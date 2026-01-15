@@ -1,20 +1,28 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { usePhotoCapture } from '@/hooks/usePhotoCapture'
 import { useScanReports, type ScanCategory } from '@/hooks/useScanReports'
+import { useAutoSave } from '@/hooks/useAutoSave'
 import PhotoCapture from '@/components/PhotoCapture'
 import FileUpload from '@/components/FileUpload'
 import PhotoGrid from '@/components/PhotoGrid'
 import ScanUpload from '@/components/ScanUpload'
 import ScanPreview from '@/components/ScanPreview'
+import FindingsEditor from '@/components/FindingsEditor'
+import PDFPreview from '@/components/PDFPreview'
+import { generatePDF, downloadPDF } from '@/utils/pdfGenerator'
 
 export default function ReportPage() {
   const params = useParams()
   const searchParams = useSearchParams()
   const [showCamera, setShowCamera] = useState(false)
+  const [showPdfPreview, setShowPdfPreview] = useState(false)
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false)
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null)
+  const [pdfBlob, setPdfBlob] = useState<Blob | null>(null)
 
   const taskId = params.taskId as string
   const roId = searchParams.get('roId')
@@ -39,6 +47,21 @@ export default function ReportPage() {
     scanCount,
   } = useScanReports()
 
+  // Findings text with auto-save
+  const [findings, setFindings, clearSavedFindings] = useAutoSave<string>(
+    '',
+    { key: `shopvisuals-diag-findings-${taskId}` }
+  )
+
+  // Clean up PDF URL on unmount
+  useEffect(() => {
+    return () => {
+      if (pdfUrl) {
+        URL.revokeObjectURL(pdfUrl)
+      }
+    }
+  }, [pdfUrl])
+
   function handleCameraCapture(blob: Blob) {
     addPhoto(blob, `capture-${Date.now()}.jpg`)
   }
@@ -51,7 +74,77 @@ export default function ReportPage() {
     addScan(file, category)
   }
 
+  const handleGeneratePdf = useCallback(async () => {
+    setIsGeneratingPdf(true)
+    setShowPdfPreview(true)
+
+    // Clean up previous URL
+    if (pdfUrl) {
+      URL.revokeObjectURL(pdfUrl)
+      setPdfUrl(null)
+      setPdfBlob(null)
+    }
+
+    try {
+      const blob = await generatePDF({
+        photos,
+        scanReports: scans,
+        findings,
+        roNumber: roId || undefined,
+        // vehicle and customer would come from TM API in full implementation
+      })
+
+      const url = URL.createObjectURL(blob)
+      setPdfBlob(blob)
+      setPdfUrl(url)
+    } catch (error) {
+      console.error('Failed to generate PDF:', error)
+      alert('Failed to generate PDF. Please try again.')
+      setShowPdfPreview(false)
+    } finally {
+      setIsGeneratingPdf(false)
+    }
+  }, [photos, scans, findings, roId, pdfUrl])
+
+  const handleDownloadPdf = useCallback(async () => {
+    if (pdfBlob) {
+      const link = document.createElement('a')
+      link.href = URL.createObjectURL(pdfBlob)
+      link.download = `inspection-report-${roId || taskId}-${Date.now()}.pdf`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    } else {
+      // Generate and download
+      try {
+        await downloadPDF(
+          {
+            photos,
+            scanReports: scans,
+            findings,
+            roNumber: roId || undefined,
+          },
+          `inspection-report-${roId || taskId}-${Date.now()}.pdf`
+        )
+      } catch (error) {
+        console.error('Failed to download PDF:', error)
+        alert('Failed to download PDF. Please try again.')
+      }
+    }
+  }, [pdfBlob, photos, scans, findings, roId, taskId])
+
+  const handleClosePdfPreview = useCallback(() => {
+    setShowPdfPreview(false)
+    // Don't clear the URL yet in case they want to re-open
+  }, [])
+
+  const handleUploadToTm = useCallback(() => {
+    // Placeholder for SPEC-008
+    alert('Upload to Tekmetric will be implemented in SPEC-008')
+  }, [])
+
   const totalAttachments = photoCount + scanCount
+  const canGeneratePdf = totalAttachments > 0 || findings.trim().length > 0
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900 pb-24">
@@ -155,26 +248,54 @@ export default function ReportPage() {
           )}
         </section>
 
-        {/* Findings Section (Placeholder) */}
-        <section className="bg-white dark:bg-zinc-800 rounded-lg shadow-sm border border-zinc-200 dark:border-zinc-700 p-6 opacity-60">
+        {/* Findings Section */}
+        <section className="bg-white dark:bg-zinc-800 rounded-lg shadow-sm border border-zinc-200 dark:border-zinc-700 p-6">
           <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-100 mb-2">
-            Findings
+            Technician Findings
           </h2>
-          <p className="text-zinc-500 dark:text-zinc-400 text-sm">
-            Coming in SPEC-007: Enter your diagnostic findings
+          <p className="text-zinc-500 dark:text-zinc-400 text-sm mb-4">
+            Describe the issue and recommended actions. This will be included in the PDF and pushed to Tekmetric.
           </p>
+
+          <FindingsEditor
+            value={findings}
+            onChange={setFindings}
+            placeholder="Describe the issue and recommended action...
+
+• What was found during inspection
+• Severity/urgency of the issue
+• Recommended repairs or next steps"
+          />
         </section>
       </main>
 
-      {/* Generate PDF Button (Placeholder) */}
+      {/* Generate PDF Button */}
       <div className="fixed bottom-0 left-0 right-0 safe-area-bottom bg-zinc-50 dark:bg-zinc-900 py-4 px-4 border-t border-zinc-200 dark:border-zinc-700">
         <div className="max-w-4xl mx-auto">
           <button
-            disabled
-            className="w-full py-4 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors touch-target text-lg"
+            onClick={handleGeneratePdf}
+            disabled={!canGeneratePdf || isGeneratingPdf}
+            className="w-full py-4 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors touch-target text-lg flex items-center justify-center gap-3"
           >
-            Generate PDF (Coming Soon)
+            {isGeneratingPdf ? (
+              <>
+                <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></div>
+                Generating PDF...
+              </>
+            ) : (
+              <>
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Generate PDF
+              </>
+            )}
           </button>
+          {!canGeneratePdf && (
+            <p className="text-center text-zinc-500 dark:text-zinc-400 text-sm mt-2">
+              Add photos, scan reports, or findings to generate a PDF
+            </p>
+          )}
         </div>
       </div>
 
@@ -183,6 +304,18 @@ export default function ReportPage() {
         <PhotoCapture
           onCapture={handleCameraCapture}
           onClose={() => setShowCamera(false)}
+        />
+      )}
+
+      {/* PDF Preview Modal */}
+      {showPdfPreview && (
+        <PDFPreview
+          pdfUrl={pdfUrl}
+          pdfBlob={pdfBlob}
+          isGenerating={isGeneratingPdf}
+          onClose={handleClosePdfPreview}
+          onDownload={handleDownloadPdf}
+          onUpload={handleUploadToTm}
         />
       )}
     </div>
