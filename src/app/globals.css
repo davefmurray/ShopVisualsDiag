@@ -46,3 +46,36 @@ body {
   min-height: 44px;
   min-width: 44px;
 }
+
+/* Shimmer animation for skeleton loaders */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgb(228 228 231) 0%,
+    rgb(244 244 245) 50%,
+    rgb(228 228 231) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+@media (prefers-color-scheme: dark) {
+  .animate-shimmer {
+    background: linear-gradient(
+      90deg,
+      rgb(63 63 70) 0%,
+      rgb(82 82 91) 50%,
+      rgb(63 63 70) 100%
+    );
+    background-size: 200% 100%;
+  }
+}
