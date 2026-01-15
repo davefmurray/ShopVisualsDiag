@@ -8,6 +8,10 @@ import type {
 const AUTH_HUB_URL = process.env.NEXT_PUBLIC_AUTH_HUB_URL || 'https://wiorzvaptjwasczzahxm.supabase.co/functions/v1'
 const AUTH_HUB_APP_KEY = process.env.NEXT_PUBLIC_AUTH_HUB_APP_KEY || ''
 
+// Video processor handles TM API calls because Railway IP can reach TM API
+// (Supabase Edge Functions IP is blocked by Tekmetric)
+const VIDEO_PROCESSOR_URL = process.env.NEXT_PUBLIC_VIDEO_PROCESSOR_URL || 'https://ast-video-processor-production.up.railway.app'
+
 /**
  * Check token status from Auth Hub for a specific shop
  * Returns whether a valid TM token exists for the shop
@@ -49,49 +53,76 @@ export async function checkTokenStatus(shopId: string = '6212'): Promise<TokenSt
 }
 
 /**
- * Proxy request to Tekmetric API via Auth Hub
+ * Get RO and inspections via video processor service
+ * Routes through Railway because TM blocks Supabase Edge Functions IP
  */
-async function tmApiRequest<T>(
-  endpoint: string,
-  options: RequestInit = {}
-): Promise<ApiResponse<T>> {
+export async function getROWithInspections(
+  shopId: string,
+  roNumber: string
+): Promise<ApiResponse<{
+  roId: number
+  roNumber: string
+  customer: { firstName: string; lastName: string }
+  vehicle: { year: number; make: string; model: string; subModel?: string }
+  tasks: Array<{
+    id: number
+    name: string
+    condition: string
+    conditionName: string
+    notes?: string
+  }>
+}>> {
   try {
-    const response = await fetch(`${AUTH_HUB_URL}/tm-proxy`, {
-      method: 'POST',
+    const url = `${VIDEO_PROCESSOR_URL}/api/get-inspections?shopId=${encodeURIComponent(shopId)}&roNumber=${encodeURIComponent(roNumber)}`
+
+    const response = await fetch(url, {
+      method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        'x-app-key': AUTH_HUB_APP_KEY,
       },
-      body: JSON.stringify({
-        endpoint,
-        method: options.method || 'GET',
-        body: options.body ? JSON.parse(options.body as string) : undefined,
-      }),
     })
 
     if (!response.ok) {
-      const errorText = await response.text()
-      return { success: false, error: `HTTP ${response.status}: ${errorText}` }
+      const errorData = await response.json().catch(() => ({}))
+      if (errorData.error === 'RO_NOT_FOUND') {
+        return { success: false, error: `RO ${roNumber} not found` }
+      }
+      if (errorData.error === 'NO_TOKEN') {
+        return { success: false, error: 'No valid Tekmetric token' }
+      }
+      return { success: false, error: errorData.details || `HTTP ${response.status}` }
     }
 
     const data = await response.json()
     return { success: true, data }
   } catch (error) {
-    console.error('TM API request failed:', error)
+    console.error('Get inspections failed:', error)
     return { success: false, error: String(error) }
   }
 }
 
 /**
- * Search for repair orders by RO number
+ * Search for repair orders by RO number (legacy - use getROWithInspections instead)
  */
 export async function searchRepairOrders(
   shopId: string,
   roNumber: string
 ): Promise<ApiResponse<RepairOrder[]>> {
-  return tmApiRequest<RepairOrder[]>(
-    `/api/shops/${shopId}/repair-orders?search=${roNumber}`
-  )
+  // Delegate to getROWithInspections and wrap result
+  const result = await getROWithInspections(shopId, roNumber)
+  if (!result.success) {
+    return result as ApiResponse<RepairOrder[]>
+  }
+  // Convert to RepairOrder format for backward compatibility
+  return {
+    success: true,
+    data: [{
+      id: result.data!.roId,
+      repairOrderNumber: result.data!.roNumber,
+      customer: result.data!.customer,
+      vehicle: result.data!.vehicle,
+    }] as unknown as RepairOrder[]
+  }
 }
 
 /**
