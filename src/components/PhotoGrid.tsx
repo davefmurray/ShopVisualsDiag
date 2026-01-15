@@ -2,12 +2,15 @@
 
 import { useState } from 'react'
 import type { CapturedPhoto } from '@/hooks/usePhotoCapture'
+import type { AnnotationData } from '@/types'
+import Annotator from './Annotator'
 
 interface PhotoGridProps {
   photos: CapturedPhoto[]
   onDelete: (id: string) => void
   onMove?: (id: string, direction: 'up' | 'down') => void
   onPhotoClick?: (photo: CapturedPhoto) => void
+  onAnnotate?: (id: string, blob: Blob, annotations: AnnotationData) => void
 }
 
 export default function PhotoGrid({
@@ -15,8 +18,10 @@ export default function PhotoGrid({
   onDelete,
   onMove,
   onPhotoClick,
+  onAnnotate,
 }: PhotoGridProps) {
   const [fullscreenPhoto, setFullscreenPhoto] = useState<CapturedPhoto | null>(null)
+  const [annotatingPhoto, setAnnotatingPhoto] = useState<CapturedPhoto | null>(null)
 
   if (photos.length === 0) {
     return null
@@ -28,6 +33,18 @@ export default function PhotoGrid({
     } else {
       setFullscreenPhoto(photo)
     }
+  }
+
+  function handleAnnotate(photo: CapturedPhoto) {
+    setAnnotatingPhoto(photo)
+    setFullscreenPhoto(null)
+  }
+
+  function handleSaveAnnotation(blob: Blob, annotations: AnnotationData) {
+    if (annotatingPhoto && onAnnotate) {
+      onAnnotate(annotatingPhoto.id, blob, annotations)
+    }
+    setAnnotatingPhoto(null)
   }
 
   return (
@@ -65,6 +82,17 @@ export default function PhotoGrid({
             onDelete(fullscreenPhoto.id)
             setFullscreenPhoto(null)
           }}
+          onAnnotate={onAnnotate ? () => handleAnnotate(fullscreenPhoto) : undefined}
+        />
+      )}
+
+      {/* Annotation Editor */}
+      {annotatingPhoto && (
+        <Annotator
+          imageUrl={annotatingPhoto.previewUrl}
+          initialAnnotations={annotatingPhoto.annotations}
+          onSave={handleSaveAnnotation}
+          onCancel={() => setAnnotatingPhoto(null)}
         />
       )}
     </>
@@ -88,6 +116,10 @@ function PhotoThumbnail({
   onMove,
   onClick,
 }: PhotoThumbnailProps) {
+  // Show annotated version if available
+  const displayUrl = photo.annotatedPreviewUrl || photo.previewUrl
+  const hasAnnotations = !!photo.annotations
+
   return (
     <div className="relative group aspect-square">
       {/* Image */}
@@ -96,15 +128,20 @@ function PhotoThumbnail({
         className="w-full h-full rounded-lg overflow-hidden bg-zinc-200 dark:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
       >
         <img
-          src={photo.previewUrl}
+          src={displayUrl}
           alt={`Photo ${index + 1}`}
           className="w-full h-full object-cover"
         />
       </button>
 
       {/* Index Badge */}
-      <div className="absolute top-1 left-1 px-1.5 py-0.5 bg-black/60 text-white text-xs font-medium rounded">
+      <div className="absolute top-1 left-1 px-1.5 py-0.5 bg-black/60 text-white text-xs font-medium rounded flex items-center gap-1">
         {index + 1}
+        {hasAnnotations && (
+          <svg className="w-3 h-3 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+          </svg>
+        )}
       </div>
 
       {/* Delete Button */}
@@ -162,9 +199,14 @@ interface PhotoFullscreenProps {
   photo: CapturedPhoto
   onClose: () => void
   onDelete: () => void
+  onAnnotate?: () => void
 }
 
-function PhotoFullscreen({ photo, onClose, onDelete }: PhotoFullscreenProps) {
+function PhotoFullscreen({ photo, onClose, onDelete, onAnnotate }: PhotoFullscreenProps) {
+  // Show annotated version if available
+  const displayUrl = photo.annotatedPreviewUrl || photo.previewUrl
+  const hasAnnotations = !!photo.annotations
+
   return (
     <div className="fixed inset-0 bg-black z-50 flex flex-col">
       {/* Header */}
@@ -177,7 +219,9 @@ function PhotoFullscreen({ photo, onClose, onDelete }: PhotoFullscreenProps) {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
-        <span className="text-white font-medium">Preview</span>
+        <span className="text-white font-medium">
+          Preview {hasAnnotations && <span className="text-blue-400 text-sm ml-1">(Annotated)</span>}
+        </span>
         <button
           onClick={onDelete}
           className="p-2 text-red-400 hover:bg-red-500/20 rounded-lg transition-colors touch-target"
@@ -196,11 +240,26 @@ function PhotoFullscreen({ photo, onClose, onDelete }: PhotoFullscreenProps) {
       {/* Image */}
       <div className="flex-1 flex items-center justify-center p-4">
         <img
-          src={photo.previewUrl}
+          src={displayUrl}
           alt="Full preview"
           className="max-w-full max-h-full object-contain"
         />
       </div>
+
+      {/* Footer with Annotate button */}
+      {onAnnotate && (
+        <div className="p-4 bg-black/50 safe-area-bottom">
+          <button
+            onClick={onAnnotate}
+            className="w-full py-3 px-4 bg-blue-500 text-white font-medium rounded-lg hover:bg-blue-600 transition-colors flex items-center justify-center gap-2"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+            </svg>
+            {hasAnnotations ? 'Edit Annotations' : 'Add Annotations'}
+          </button>
+        </div>
+      )}
     </div>
   )
 }

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
+import type { AnnotationData } from '@/types'
 
 export interface CapturedPhoto {
   id: string
@@ -8,6 +9,9 @@ export interface CapturedPhoto {
   previewUrl: string
   timestamp: Date
   filename?: string
+  annotations?: AnnotationData
+  annotatedBlob?: Blob
+  annotatedPreviewUrl?: string
 }
 
 export function usePhotoCapture() {
@@ -88,6 +92,34 @@ export function usePhotoCapture() {
     })
   }, [])
 
+  const updatePhotoAnnotations = useCallback(
+    (id: string, annotatedBlob: Blob, annotations: AnnotationData) => {
+      setPhotos((prev) =>
+        prev.map((photo) => {
+          if (photo.id !== id) return photo
+
+          // Revoke old annotated preview URL if it exists
+          if (photo.annotatedPreviewUrl) {
+            URL.revokeObjectURL(photo.annotatedPreviewUrl)
+          }
+
+          return {
+            ...photo,
+            annotations,
+            annotatedBlob,
+            annotatedPreviewUrl: URL.createObjectURL(annotatedBlob),
+          }
+        })
+      )
+    },
+    []
+  )
+
+  const getPhotoForDisplay = useCallback((photo: CapturedPhoto): string => {
+    // Return annotated version if available, otherwise original
+    return photo.annotatedPreviewUrl || photo.previewUrl
+  }, [])
+
   return {
     photos,
     addPhoto,
@@ -96,6 +128,8 @@ export function usePhotoCapture() {
     reorderPhotos,
     movePhoto,
     clearPhotos,
+    updatePhotoAnnotations,
+    getPhotoForDisplay,
     photoCount: photos.length,
   }
 }

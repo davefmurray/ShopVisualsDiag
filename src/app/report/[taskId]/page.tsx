@@ -26,6 +26,7 @@ export default function ReportPage() {
     addPhotos,
     removePhoto,
     movePhoto,
+    updatePhotoAnnotations,
     photoCount,
   } = usePhotoCapture()
 
@@ -126,6 +127,7 @@ export default function ReportPage() {
                 photos={photos}
                 onDelete={removePhoto}
                 onMove={movePhoto}
+                onAnnotate={updatePhotoAnnotations}
               />
             </div>
           )}

@@ -82,12 +82,26 @@ export interface ReportPhoto {
   caption?: string
 }
 
+// Fabric.js serialized annotation data
 export interface AnnotationData {
+  objects: object[]  // Fabric.js serialized objects
+  version: string
+  canvasWidth: number
+  canvasHeight: number
+}
+
+// Legacy single annotation (kept for compatibility)
+export interface SingleAnnotation {
   type: 'arrow' | 'circle' | 'rectangle' | 'text'
   color: string
   points: number[]
   text?: string
 }
+
+// Annotation tool types
+export type AnnotationTool = 'select' | 'arrow' | 'circle' | 'rectangle' | 'text' | 'freehand'
+export type AnnotationColor = '#EF4444' | '#F59E0B' | '#3B82F6' // red, yellow, blue
+export type LineThickness = 2 | 4 | 6 // thin, medium, thick
 
 export interface ScanReport {
   id: string
