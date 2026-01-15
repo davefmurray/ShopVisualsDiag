@@ -9,12 +9,15 @@ const AUTH_HUB_URL = process.env.NEXT_PUBLIC_AUTH_HUB_URL || 'https://wiorzvaptj
 const AUTH_HUB_APP_KEY = process.env.NEXT_PUBLIC_AUTH_HUB_APP_KEY || ''
 
 /**
- * Check token status from Auth Hub
- * Returns whether a valid TM token exists for the current session
+ * Check token status from Auth Hub for a specific shop
+ * Returns whether a valid TM token exists for the shop
+ *
+ * Note: Auth Hub stores tokens by shop ID. The Chrome extension captures
+ * tokens when a user logs into TM for a specific shop.
  */
-export async function checkTokenStatus(): Promise<TokenStatus> {
+export async function checkTokenStatus(shopId: string = '6212'): Promise<TokenStatus> {
   try {
-    const response = await fetch(`${AUTH_HUB_URL}/get-token-status`, {
+    const response = await fetch(`${AUTH_HUB_URL}/token/${encodeURIComponent(shopId)}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -28,16 +31,17 @@ export async function checkTokenStatus(): Promise<TokenStatus> {
 
     const data = await response.json()
 
-    if (data.token && data.shopId) {
+    // Auth Hub returns: jwt_token, shop_name, token_is_valid, expires_at, shop_id
+    if (data.jwt_token && data.token_is_valid) {
       return {
         hasToken: true,
-        shopId: data.shopId,
-        shopName: data.shopName,
-        expiresAt: data.expiresAt,
+        shopId: data.shop_id || shopId,
+        shopName: data.shop_name,
+        expiresAt: data.expires_at,
       }
     }
 
-    return { hasToken: false }
+    return { hasToken: false, error: data.error || 'No valid token' }
   } catch (error) {
     console.error('Token status check failed:', error)
     return { hasToken: false, error: String(error) }
