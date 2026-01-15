@@ -1,59 +1,114 @@
-# Ralph Wiggum
+# ShopVisualsDiag
 
-> Autonomous AI coding with spec-driven development
+Visual diagnostic report builder for automotive repair shops. Creates professional PDF reports with photos, annotations, and scan reports, then uploads directly to Tekmetric.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+## Features
 
----
+- **RO Lookup** - Search repair orders by number
+- **Photo Capture** - Take photos via mobile camera or upload from desktop
+- **Photo Annotation** - Draw arrows, circles, and text to highlight issues
+- **Scan Reports** - Upload OBD2, alignment, battery test PDFs
+- **PDF Generation** - Auto-layout professional reports
+- **TM Integration** - Upload PDF and findings directly to Tekmetric
 
-## 🤖 AI Agent: Read This First
+## Production URL
 
-**If you are an AI coding agent** that has been pointed to this repository, you MUST:
+https://web-production-97db.up.railway.app
 
-1. **Read and execute [INSTALLATION.md](INSTALLATION.md)** — It contains step-by-step instructions for setting up Ralph Wiggum in the user's project
-2. **Interview the user** to create their project constitution
-3. **Set up all required files** including bash scripts, slash commands, and config files
-4. **Guide the user** through their first specification or issue backlog setup
+## Tech Stack
 
-**Do NOT just describe the process. Actually execute it.**
+- **Frontend**: Next.js 14, TypeScript, Tailwind CSS
+- **PDF**: jspdf
+- **Annotations**: Fabric.js
+- **Auth**: Auth Hub (Supabase Edge Functions + Chrome Extension)
+- **Backend**: ast-video-processor (Railway)
+- **Deployment**: Railway
 
----
+## Setup
 
-## For Humans
+### Prerequisites
 
-Tell your AI coding agent:
+1. Chrome extension installed for TM token capture
+2. Logged into Tekmetric
+3. Token synced via extension
 
-> "Set up Ralph Wiggum in this project using https://github.com/fstandhartinger/ralph-wiggum"
+### Environment Variables
 
-Your AI will:
-1. Interview you about your project
-2. Set up a constitution and workflow
-3. Configure YOLO mode (recommended) for fully autonomous operation
-4. Help you create specs or connect to your issue tracker
-5. Show you how to start the Ralph loop
+```bash
+# .env.local
+NEXT_PUBLIC_AUTH_HUB_URL=https://wiorzvaptjwasczzahxm.supabase.co/functions/v1
+NEXT_PUBLIC_AUTH_HUB_APP_KEY=your-app-key
+NEXT_PUBLIC_VIDEO_PROCESSOR_URL=https://ast-video-processor-production.up.railway.app
+```
 
----
+### Development
 
-## What is Ralph Wiggum?
+```bash
+npm install
+npm run dev
+```
 
-Ralph Wiggum is **fully autonomous AI-assisted software development**:
+### Build
 
-- 🔄 **Iterative self-correction** — AI works until acceptance criteria pass
-- 📋 **Spec-driven** — Professional specifications guide the work
-- 🤖 **YOLO mode** — No permission prompts, full autonomy
-- 🔁 **Nested loops** — Outer loop manages backlog, inner loops implement each item
+```bash
+npm run build
+npm start
+```
 
-## Credits
+## Usage
 
-Built upon:
-- [Ralph Wiggum technique](https://awesomeclaude.ai/ralph-wiggum) by the Claude community
-- [How to Ralph Wiggum](https://github.com/ghuntley/how-to-ralph-wiggum) by Geoffrey Huntley
-- [SpecKit](https://github.com/github/spec-kit) by GitHub
+1. Open the app and verify "Connected" badge shows green
+2. Enter an RO number to find the repair order
+3. Select an inspection task
+4. Capture photos (camera or upload)
+5. Add annotations to highlight issues
+6. Upload scan reports (optional)
+7. Enter technician findings
+8. Generate PDF preview
+9. Upload to Tekmetric
+
+## API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/health` | GET | Health check |
+
+## Deployment
+
+Deployed to Railway with auto-deploy on push to `main`.
+
+### Railway Configuration
+
+See `railway.toml` for deployment settings.
+
+### Environment Variables (Railway)
+
+Set these in Railway dashboard:
+- `NEXT_PUBLIC_AUTH_HUB_URL`
+- `NEXT_PUBLIC_AUTH_HUB_APP_KEY`
+- `NEXT_PUBLIC_VIDEO_PROCESSOR_URL`
+
+## Troubleshooting
+
+### "Tekmetric Connection Required"
+
+1. Install TM Token Capture Chrome extension
+2. Log into Tekmetric in another tab
+3. Click extension icon to capture token
+4. Refresh this app
+
+### Photos not uploading
+
+- Check file size (max 10MB per photo)
+- Ensure network connection is stable
+- Try reducing number of photos
+
+### PDF generation fails
+
+- Reduce number of photos (try < 20)
+- Check browser console for errors
+- Try desktop Chrome (most reliable)
 
 ## License
 
-MIT License - See [LICENSE](LICENSE) for details.
-
----
-
-**Website**: [ralph-wiggum-web.onrender.com](https://ralph-wiggum-web.onrender.com)
+MIT
