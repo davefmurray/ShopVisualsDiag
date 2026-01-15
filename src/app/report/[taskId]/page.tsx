@@ -4,9 +4,12 @@ import { useState } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { usePhotoCapture } from '@/hooks/usePhotoCapture'
+import { useScanReports, type ScanCategory } from '@/hooks/useScanReports'
 import PhotoCapture from '@/components/PhotoCapture'
 import FileUpload from '@/components/FileUpload'
 import PhotoGrid from '@/components/PhotoGrid'
+import ScanUpload from '@/components/ScanUpload'
+import ScanPreview from '@/components/ScanPreview'
 
 export default function ReportPage() {
   const params = useParams()
@@ -14,10 +17,9 @@ export default function ReportPage() {
   const [showCamera, setShowCamera] = useState(false)
 
   const taskId = params.taskId as string
-  const shopId = searchParams.get('shopId')
   const roId = searchParams.get('roId')
-  const inspectionId = searchParams.get('inspectionId')
 
+  // Photo capture state
   const {
     photos,
     addPhoto,
@@ -27,6 +29,15 @@ export default function ReportPage() {
     photoCount,
   } = usePhotoCapture()
 
+  // Scan reports state
+  const {
+    scans,
+    addScan,
+    removeScan,
+    updateCategory,
+    scanCount,
+  } = useScanReports()
+
   function handleCameraCapture(blob: Blob) {
     addPhoto(blob, `capture-${Date.now()}.jpg`)
   }
@@ -35,8 +46,14 @@ export default function ReportPage() {
     addPhotos(files)
   }
 
+  function handleScanSelected(file: File, category: ScanCategory) {
+    addScan(file, category)
+  }
+
+  const totalAttachments = photoCount + scanCount
+
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900">
+    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900 pb-24">
       {/* Header */}
       <header className="bg-white dark:bg-zinc-800 border-b border-zinc-200 dark:border-zinc-700 sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
@@ -53,9 +70,9 @@ export default function ReportPage() {
               Create Report
             </h1>
           </div>
-          {photoCount > 0 && (
+          {totalAttachments > 0 && (
             <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-sm font-medium rounded-full">
-              {photoCount} photo{photoCount !== 1 ? 's' : ''}
+              {totalAttachments} item{totalAttachments !== 1 ? 's' : ''}
             </span>
           )}
         </div>
@@ -114,14 +131,26 @@ export default function ReportPage() {
           )}
         </section>
 
-        {/* Scan Reports Section (Placeholder) */}
-        <section className="bg-white dark:bg-zinc-800 rounded-lg shadow-sm border border-zinc-200 dark:border-zinc-700 p-6 opacity-60">
-          <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-100 mb-2">
+        {/* Scan Reports Section */}
+        <section className="bg-white dark:bg-zinc-800 rounded-lg shadow-sm border border-zinc-200 dark:border-zinc-700 p-6">
+          <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-100 mb-4">
             Scan Reports
           </h2>
-          <p className="text-zinc-500 dark:text-zinc-400 text-sm">
-            Coming in SPEC-004: Upload diagnostic documents (OBD2, alignment, battery tests)
+          <p className="text-zinc-500 dark:text-zinc-400 text-sm mb-4">
+            Upload diagnostic scan reports (OBD2, alignment, battery tests, etc.)
           </p>
+
+          <ScanUpload onFileSelected={handleScanSelected} />
+
+          {scans.length > 0 && (
+            <div className="mt-6 pt-6 border-t border-zinc-200 dark:border-zinc-700">
+              <ScanPreview
+                scans={scans}
+                onDelete={removeScan}
+                onUpdateCategory={updateCategory}
+              />
+            </div>
+          )}
         </section>
 
         {/* Findings Section (Placeholder) */}
@@ -133,9 +162,11 @@ export default function ReportPage() {
             Coming in SPEC-007: Enter your diagnostic findings
           </p>
         </section>
+      </main>
 
-        {/* Generate PDF Button (Placeholder) */}
-        <div className="sticky bottom-0 safe-area-bottom bg-zinc-50 dark:bg-zinc-900 py-4 -mx-4 px-4 border-t border-zinc-200 dark:border-zinc-700">
+      {/* Generate PDF Button (Placeholder) */}
+      <div className="fixed bottom-0 left-0 right-0 safe-area-bottom bg-zinc-50 dark:bg-zinc-900 py-4 px-4 border-t border-zinc-200 dark:border-zinc-700">
+        <div className="max-w-4xl mx-auto">
           <button
             disabled
             className="w-full py-4 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors touch-target text-lg"
@@ -143,7 +174,7 @@ export default function ReportPage() {
             Generate PDF (Coming Soon)
           </button>
         </div>
-      </main>
+      </div>
 
       {/* Camera Modal */}
       {showCamera && (
