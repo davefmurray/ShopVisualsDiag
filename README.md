@@ -6,11 +6,11 @@
 
 ---
 
-## 🤖 AI Agent? Start Here
+## 🤖 AI Agent? Installing Ralph Wiggum?
 
-**If you are an AI coding agent**, read and execute the instructions in **[AGENTS.md](AGENTS.md)**.
+**If you are an AI coding agent setting up Ralph Wiggum in a user's project**, read and execute the instructions in **[INSTALLATION.md](INSTALLATION.md)**.
 
-That file contains everything you need to set up Ralph Wiggum in a user's project.
+That file contains everything you need to install Ralph Wiggum.
 
 ---
 
@@ -28,7 +28,7 @@ Ralph Wiggum is an approach to **fully autonomous AI-assisted software developme
 
 > "Set up Ralph Wiggum in this project using the instructions at https://github.com/fstandhartinger/ralph-wiggum"
 
-That's it. Your AI will read the AGENTS.md file and set up everything automatically.
+That's it. Your AI will read the INSTALLATION.md file and set up everything automatically.
 
 ---
 
@@ -91,6 +91,16 @@ codex --login
 # Or directly:
 codex --dangerously-bypass-approvals-and-sandbox --prompt-file codex-prompts/ralph-all.md
 ```
+
+---
+
+## File Reference
+
+| File | Purpose |
+|------|---------|
+| [INSTALLATION.md](INSTALLATION.md) | **For AI agents**: Step-by-step setup instructions with all file contents |
+| [AGENTS.md](AGENTS.md) | **For AI agents**: Day-to-day working instructions |
+| [INSTALL.md](INSTALL.md) | **For humans**: Quick manual installation guide |
 
 ---
 
