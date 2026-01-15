@@ -8,11 +8,16 @@ interface VehicleInfoProps {
 }
 
 export default function VehicleInfo({ ro, onClear }: VehicleInfoProps) {
-  const { vehicle, customer, repairOrderNumber } = ro
-  const customerName = `${customer.firstName} ${customer.lastName}`.trim()
-  const vehicleDescription = [vehicle.year, vehicle.make, vehicle.model]
-    .filter(Boolean)
-    .join(' ')
+  const { repairOrderNumber } = ro
+
+  // Handle both legacy format (objects) and new format (strings from video processor)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const roAny = ro as any
+  const customerName = roAny.customerName ||
+    (roAny.customer?.firstName ? `${roAny.customer.firstName} ${roAny.customer.lastName}`.trim() : 'Unknown Customer')
+  const vehicleDescription = roAny.vehicleDescription ||
+    (roAny.vehicle?.year ? [roAny.vehicle.year, roAny.vehicle.make, roAny.vehicle.model].filter(Boolean).join(' ') : 'Unknown Vehicle')
+  const vehicleVin = roAny.vehicle?.vin
 
   return (
     <div className="bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg p-4">
@@ -36,9 +41,9 @@ export default function VehicleInfo({ ro, onClear }: VehicleInfoProps) {
           </p>
 
           {/* VIN if available */}
-          {vehicle.vin && (
+          {vehicleVin && (
             <p className="text-sm text-zinc-500 dark:text-zinc-500 mt-1 font-mono">
-              VIN: {vehicle.vin}
+              VIN: {vehicleVin}
             </p>
           )}
         </div>
