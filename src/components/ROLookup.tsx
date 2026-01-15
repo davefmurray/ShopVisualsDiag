@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { searchRepairOrders, getInspections } from '@/utils/api'
+import { getROWithInspections } from '@/utils/api'
 import type { RepairOrder, Inspection } from '@/types'
 
 interface ROLookupProps {
@@ -23,27 +23,46 @@ export default function ROLookup({ shopId, onROFound, onError }: ROLookupProps) 
     setLoading(true)
 
     try {
-      // Search for RO
-      const roResult = await searchRepairOrders(shopId, roNumber.trim())
+      // Get RO and inspections in one call via video processor
+      const result = await getROWithInspections(shopId, roNumber.trim())
 
-      if (!roResult.success || !roResult.data?.length) {
-        onError(`RO ${roNumber} not found`)
+      if (!result.success) {
+        onError(result.error || `RO ${roNumber} not found`)
         setLoading(false)
         return
       }
 
-      const ro = roResult.data[0]
+      const data = result.data!
 
-      // Get inspections for this RO
-      const inspResult = await getInspections(shopId, ro.id)
+      // Convert to RepairOrder format expected by parent component
+      const ro = {
+        id: data.roId,
+        repairOrderNumber: Number(data.roNumber),
+        customerName: data.customer,
+        vehicleDescription: data.vehicle,
+      } as unknown as RepairOrder
 
-      if (!inspResult.success) {
-        onError('Failed to load inspections')
-        setLoading(false)
-        return
+      // Group tasks by inspection to create Inspection objects
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const inspectionMap = new Map<number, any>()
+      for (const task of data.tasks) {
+        if (!inspectionMap.has(task.inspectionId)) {
+          inspectionMap.set(task.inspectionId, {
+            id: task.inspectionId,
+            name: task.inspectionName,
+            tasks: [],
+          })
+        }
+        inspectionMap.get(task.inspectionId)!.tasks.push({
+          id: task.id,
+          name: task.name,
+          rating: task.rating,
+          notes: task.finding,
+          group: task.group,
+        })
       }
 
-      onROFound(ro, inspResult.data || [])
+      onROFound(ro, Array.from(inspectionMap.values()) as Inspection[])
     } catch (err) {
       console.error('RO lookup error:', err)
       onError('Failed to search for RO. Please try again.')

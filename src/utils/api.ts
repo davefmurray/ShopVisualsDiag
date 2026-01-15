@@ -61,15 +61,20 @@ export async function getROWithInspections(
   roNumber: string
 ): Promise<ApiResponse<{
   roId: number
-  roNumber: string
-  customer: { firstName: string; lastName: string }
-  vehicle: { year: number; make: string; model: string; subModel?: string }
+  roNumber: number | string
+  customer: string
+  vehicle: string
   tasks: Array<{
     id: number
     name: string
-    condition: string
-    conditionName: string
-    notes?: string
+    inspectionId: number
+    inspectionName: string
+    rating: string | null
+    finding: string
+    group: string
+    groupSortOrder: number
+    inspectionTaskId: number
+    externalImages: string[]
   }>
 }>> {
   try {
@@ -114,13 +119,14 @@ export async function searchRepairOrders(
     return { success: false, error: result.error }
   }
   // Convert to RepairOrder format for backward compatibility
+  // Note: customer and vehicle are strings from video-processor API
   return {
     success: true,
     data: [{
       id: result.data!.roId,
-      repairOrderNumber: result.data!.roNumber,
-      customer: result.data!.customer,
-      vehicle: result.data!.vehicle,
+      repairOrderNumber: Number(result.data!.roNumber),
+      customerName: result.data!.customer,
+      vehicleDescription: result.data!.vehicle,
     }] as unknown as RepairOrder[]
   }
 }
