@@ -20,7 +20,6 @@ export async function checkTokenStatus(): Promise<TokenStatus> {
         'Content-Type': 'application/json',
         'x-app-key': AUTH_HUB_APP_KEY,
       },
-      credentials: 'include',
     })
 
     if (!response.ok) {
@@ -59,7 +58,6 @@ async function tmApiRequest<T>(
         'Content-Type': 'application/json',
         'x-app-key': AUTH_HUB_APP_KEY,
       },
-      credentials: 'include',
       body: JSON.stringify({
         endpoint,
         method: options.method || 'GET',
