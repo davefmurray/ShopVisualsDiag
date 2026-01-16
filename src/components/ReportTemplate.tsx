@@ -27,6 +27,16 @@ const styles = StyleSheet.create({
     fontFamily: 'Helvetica',
     fontSize: 10,
   },
+  fullImagePage: {
+    padding: 20,
+    backgroundColor: '#ffffff',
+    fontFamily: 'Helvetica',
+    fontSize: 10,
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   header: {
     marginBottom: 20,
     borderBottomWidth: 2,
@@ -73,47 +83,43 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#111827',
   },
-  photoGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  photoContainer: {
-    marginBottom: 10,
-  },
-  photoFull: {
+  fullPageImageContainer: {
+    flex: 1,
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
     width: '100%',
   },
-  photoHalf: {
-    width: '48%',
-  },
-  photo: {
+  fullPageImage: {
     objectFit: 'contain',
-    marginBottom: 4,
+    maxWidth: '100%',
+    maxHeight: '100%',
   },
-  photoCaption: {
+  imageCaption: {
+    fontSize: 10,
+    color: '#6b7280',
+    textAlign: 'center',
+    marginTop: 8,
+  },
+  imageSectionHeader: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#1e3a8a',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  scanReportHeader: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    color: '#374151',
+    textAlign: 'center',
+    marginBottom: 5,
+  },
+  scanReportPage: {
     fontSize: 9,
     color: '#6b7280',
     textAlign: 'center',
-  },
-  scanReport: {
     marginBottom: 10,
-    padding: 10,
-    backgroundColor: '#f9fafb',
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderRadius: 4,
-  },
-  scanReportTitle: {
-    fontSize: 10,
-    fontWeight: 'bold',
-    color: '#374151',
-    marginBottom: 4,
-  },
-  scanReportImage: {
-    width: '100%',
-    objectFit: 'contain',
-    maxHeight: 400,
   },
   findings: {
     fontSize: 11,
@@ -122,14 +128,14 @@ const styles = StyleSheet.create({
   },
   footer: {
     position: 'absolute',
-    bottom: 30,
-    left: 40,
-    right: 40,
+    bottom: 15,
+    left: 20,
+    right: 20,
     flexDirection: 'row',
     justifyContent: 'space-between',
     borderTopWidth: 1,
     borderTopColor: '#e5e7eb',
-    paddingTop: 10,
+    paddingTop: 8,
     fontSize: 8,
     color: '#9ca3af',
   },
@@ -145,6 +151,9 @@ interface PhotoItem {
   id: string
   dataUrl: string
   caption?: string
+  width: number
+  height: number
+  isLandscape: boolean
 }
 
 interface ScanReportItem {
@@ -152,6 +161,10 @@ interface ScanReportItem {
   name: string
   category: string
   dataUrl: string
+  width: number
+  height: number
+  isLandscape: boolean
+  pageNumber?: number
 }
 
 interface ReportTemplateProps {
@@ -181,17 +194,12 @@ export default function ReportTemplate({
     })
   }
 
-  // Calculate photo layout
-  const getPhotoStyle = (index: number, total: number) => {
-    if (total === 1) return styles.photoFull
-    return styles.photoHalf
-  }
-
-  // Split photos into pages (max 4 per page)
-  const photosPerPage = 4
-  const photoPages: PhotoItem[][] = []
-  for (let i = 0; i < photos.length; i += photosPerPage) {
-    photoPages.push(photos.slice(i, i + photosPerPage))
+  // Group scan reports by source PDF (for page numbering display)
+  const getScanReportLabel = (scan: ScanReportItem) => {
+    if (scan.pageNumber) {
+      return `${scan.name} - Page ${scan.pageNumber}`
+    }
+    return scan.name
   }
 
   return (
@@ -260,26 +268,20 @@ export default function ReportTemplate({
           </View>
         )}
 
-        {/* First set of photos (if we have any) */}
-        {photoPages.length > 0 && (
+        {/* Summary of attachments */}
+        {(photos.length > 0 || scanReports.length > 0) && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Inspection Photos</Text>
-            <View style={styles.photoGrid}>
-              {photoPages[0].map((photo, index) => (
-                <View
-                  key={photo.id}
-                  style={[
-                    styles.photoContainer,
-                    getPhotoStyle(index, photoPages[0].length),
-                  ]}
-                >
-                  <Image src={photo.dataUrl} style={styles.photo} />
-                  {photo.caption && (
-                    <Text style={styles.photoCaption}>{photo.caption}</Text>
-                  )}
-                </View>
-              ))}
-            </View>
+            <Text style={styles.sectionTitle}>Attachments</Text>
+            {photos.length > 0 && (
+              <Text style={styles.infoValue}>
+                • {photos.length} Inspection Photo{photos.length > 1 ? 's' : ''}
+              </Text>
+            )}
+            {scanReports.length > 0 && (
+              <Text style={styles.infoValue}>
+                • {scanReports.length} Scan Report Page{scanReports.length > 1 ? 's' : ''}
+              </Text>
+            )}
           </View>
         )}
 
@@ -297,30 +299,25 @@ export default function ReportTemplate({
         </View>
       </Page>
 
-      {/* Additional Photo Pages */}
-      {photoPages.slice(1).map((pagePhotos, pageIndex) => (
-        <Page key={`photo-page-${pageIndex}`} size="A4" style={styles.page}>
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>
-              Inspection Photos (continued)
-            </Text>
-            <View style={styles.photoGrid}>
-              {pagePhotos.map((photo, index) => (
-                <View
-                  key={photo.id}
-                  style={[
-                    styles.photoContainer,
-                    getPhotoStyle(index, pagePhotos.length),
-                  ]}
-                >
-                  <Image src={photo.dataUrl} style={styles.photo} />
-                  {photo.caption && (
-                    <Text style={styles.photoCaption}>{photo.caption}</Text>
-                  )}
-                </View>
-              ))}
-            </View>
+      {/* Each Photo on its own page - auto-oriented */}
+      {photos.map((photo, index) => (
+        <Page
+          key={`photo-${photo.id}`}
+          size="A4"
+          orientation={photo.isLandscape ? 'landscape' : 'portrait'}
+          style={styles.fullImagePage}
+        >
+          <Text style={styles.imageSectionHeader}>
+            Inspection Photo {index + 1} of {photos.length}
+          </Text>
+
+          <View style={styles.fullPageImageContainer}>
+            <Image src={photo.dataUrl} style={styles.fullPageImage} />
           </View>
+
+          {photo.caption && (
+            <Text style={styles.imageCaption}>{photo.caption}</Text>
+          )}
 
           <View style={styles.footer} fixed>
             <Text style={styles.disclaimer}>
@@ -336,19 +333,23 @@ export default function ReportTemplate({
         </Page>
       ))}
 
-      {/* Scan Reports Pages */}
-      {scanReports.length > 0 && (
-        <Page size="A4" style={styles.page}>
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Diagnostic Scan Reports</Text>
-            {scanReports.map((scan) => (
-              <View key={scan.id} style={styles.scanReport}>
-                <Text style={styles.scanReportTitle}>
-                  {scan.name} ({scan.category.toUpperCase()})
-                </Text>
-                <Image src={scan.dataUrl} style={styles.scanReportImage} />
-              </View>
-            ))}
+      {/* Each Scan Report page on its own page - auto-oriented */}
+      {scanReports.map((scan, index) => (
+        <Page
+          key={`scan-${scan.id}`}
+          size="A4"
+          orientation={scan.isLandscape ? 'landscape' : 'portrait'}
+          style={styles.fullImagePage}
+        >
+          <Text style={styles.scanReportHeader}>
+            {scan.category.toUpperCase()}
+          </Text>
+          <Text style={styles.scanReportPage}>
+            {getScanReportLabel(scan)}
+          </Text>
+
+          <View style={styles.fullPageImageContainer}>
+            <Image src={scan.dataUrl} style={styles.fullPageImage} />
           </View>
 
           <View style={styles.footer} fixed>
@@ -363,7 +364,7 @@ export default function ReportTemplate({
             />
           </View>
         </Page>
-      )}
+      ))}
     </Document>
   )
 }
