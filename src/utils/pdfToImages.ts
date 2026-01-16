@@ -2,9 +2,9 @@
 
 import * as pdfjsLib from 'pdfjs-dist'
 
-// Set up the worker
+// Set up the worker - use the worker file from public directory
 if (typeof window !== 'undefined') {
-  pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`
+  pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
 }
 
 export interface PDFPageImage {
