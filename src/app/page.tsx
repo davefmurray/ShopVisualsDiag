@@ -53,7 +53,9 @@ export default function Home() {
     const params = new URLSearchParams({
       shopId: tokenStatus.shopId,
       roId: String(selectedRO.id),
+      roNumber: String(selectedRO.repairOrderNumber),
       inspectionId: String(inspection.id),
+      taskName: task.name,
     })
     router.push(`/report/${task.id}?${params.toString()}`)
   }

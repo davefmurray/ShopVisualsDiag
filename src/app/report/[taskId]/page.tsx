@@ -35,8 +35,10 @@ export default function ReportPage() {
 
   const taskId = params.taskId as string
   const roId = searchParams.get('roId')
+  const roNumber = searchParams.get('roNumber')
   const shopId = searchParams.get('shopId')
   const inspectionId = searchParams.get('inspectionId')
+  const taskName = searchParams.get('taskName')
 
   // Photo capture state
   const {
@@ -246,9 +248,12 @@ export default function ReportPage() {
       {/* Main Content */}
       <main className="max-w-4xl mx-auto px-4 py-6 space-y-6">
         {/* Context Info */}
-        <div className="bg-zinc-100 dark:bg-zinc-800 rounded-lg p-3 text-sm font-mono text-zinc-600 dark:text-zinc-400">
-          <span className="text-zinc-400 dark:text-zinc-500">Task:</span> {taskId} •{' '}
-          <span className="text-zinc-400 dark:text-zinc-500">RO:</span> {roId}
+        <div className="bg-zinc-100 dark:bg-zinc-800 rounded-lg p-3 text-sm text-zinc-600 dark:text-zinc-400">
+          <span className="text-zinc-400 dark:text-zinc-500">Task:</span>{' '}
+          <span className="font-medium text-zinc-700 dark:text-zinc-300">{taskName || taskId}</span>
+          {' '}•{' '}
+          <span className="text-zinc-400 dark:text-zinc-500">RO:</span>{' '}
+          <span className="font-medium text-zinc-700 dark:text-zinc-300">{roNumber || roId}</span>
         </div>
 
         {/* Photo Capture Section */}
