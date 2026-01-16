@@ -18,7 +18,7 @@ export const metadata: Metadata = {
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
-    statusBarStyle: 'default',
+    statusBarStyle: 'black-translucent',
     title: 'ShopVisualsDiag',
   },
 }
@@ -29,6 +29,8 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: 'cover',
+  themeColor: '#0a0a0a',
+  colorScheme: 'dark',
 }
 
 export default function RootLayout({
